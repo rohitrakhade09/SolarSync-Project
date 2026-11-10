@@ -1,0 +1,859 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#071522">
+<title>SolarSync | STM32 Power Management</title>
+
+<link rel="stylesheet" href="style.css">
+
+<style>
+:root {
+  --green:#54ffad;
+  --cyan:#43dcff;
+  --purple:#b39aff;
+  --red:#ff7777;
+  --amber:#ffc76b;
+  --bg:#071522;
+  --panel:#10283a;
+  --muted:#a3b7c5;
+}
+
+html { scroll-behavior:smooth; scroll-padding-top:90px; }
+body { overflow-x:hidden; }
+a { text-decoration:none; }
+
+header {
+  position:sticky;
+  top:0;
+  z-index:100;
+  backdrop-filter:blur(18px);
+}
+
+.nav { gap:15px; }
+.nav-links { flex-wrap:wrap; justify-content:flex-end; }
+
+.menu-btn {
+  display:none;
+  padding:9px 13px;
+  border:1px solid #345164;
+  border-radius:8px;
+  background:#10283a;
+  color:white;
+  cursor:pointer;
+}
+
+.hero {
+  min-height:650px;
+  display:grid;
+  grid-template-columns:1.05fr .95fr;
+  align-items:center;
+  gap:45px;
+  position:relative;
+  isolation:isolate;
+}
+
+.hero::before {
+  content:"";
+  position:absolute;
+  z-index:-1;
+  width:500px;
+  height:500px;
+  right:-170px;
+  top:-100px;
+  background:radial-gradient(circle,rgba(67,220,255,.15),transparent 70%);
+  animation:ambient 7s ease-in-out infinite alternate;
+}
+
+@keyframes ambient {
+  to { transform:scale(1.3); opacity:.5; }
+}
+
+.hero-tag {
+  display:inline-block;
+  padding:8px 13px;
+  color:var(--green);
+  border:1px solid rgba(84,255,173,.25);
+  border-radius:30px;
+  background:rgba(84,255,173,.07);
+  font-size:10px;
+  letter-spacing:2px;
+  font-weight:800;
+}
+
+.hero h1 {
+  font-size:clamp(42px,6vw,75px);
+  line-height:1.08;
+  letter-spacing:-3px;
+  margin:24px 0;
+}
+
+.hero h1 span {
+  color:var(--green);
+  text-shadow:0 0 35px rgba(84,255,173,.25);
+}
+
+.hero p { color:var(--muted); max-width:530px; }
+
+.hero-actions { display:flex; gap:12px; flex-wrap:wrap; margin-top:28px; }
+
+.hero-actions a {
+  padding:13px 19px;
+  border-radius:9px;
+  font-size:11px;
+  font-weight:800;
+  transition:.3s;
+}
+
+.hero-actions a:first-child { background:var(--green); color:#071d15; }
+.hero-actions a:last-child { border:1px solid #345164; color:white; }
+.hero-actions a:hover { transform:translateY(-5px); }
+
+.hero-visual {
+  padding:25px;
+  border:1px solid rgba(84,255,173,.25);
+  border-radius:24px;
+  background:linear-gradient(145deg,#153347,#091a28);
+  box-shadow:0 25px 80px rgba(0,0,0,.35);
+  animation:float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  50% { transform:translateY(-12px); }
+}
+
+.visual-top {
+  display:flex;
+  justify-content:space-between;
+  font-size:10px;
+  letter-spacing:1.5px;
+  color:var(--muted);
+}
+
+.live { color:var(--green); }
+
+.core-area {
+  height:215px;
+  display:grid;
+  place-items:center;
+  position:relative;
+}
+
+.orbit {
+  position:absolute;
+  width:155px;
+  height:155px;
+  border:1px solid rgba(84,255,173,.45);
+  border-radius:50%;
+  animation:spin 12s linear infinite;
+}
+
+.orbit::before {
+  content:"";
+  position:absolute;
+  top:13px;
+  left:30px;
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:var(--cyan);
+  box-shadow:0 0 15px var(--cyan);
+}
+
+.orbit.outer {
+  width:190px;
+  height:190px;
+  border-color:rgba(67,220,255,.2);
+  animation-direction:reverse;
+  animation-duration:20s;
+}
+
+@keyframes spin { to { transform:rotate(360deg); } }
+
+.core {
+  width:110px;
+  height:110px;
+  display:grid;
+  place-items:center;
+  text-align:center;
+  border:1px solid var(--green);
+  border-radius:25px;
+  background:linear-gradient(145deg,#164d42,#0c292b);
+  box-shadow:0 0 40px rgba(84,255,173,.2);
+  z-index:2;
+}
+
+.core strong { display:block; color:var(--green); font-size:23px; }
+.core small { font-size:9px; letter-spacing:2px; }
+
+.source-grid {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+}
+
+.source-card {
+  padding:13px 5px;
+  text-align:center;
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:12px;
+  background:rgba(255,255,255,.03);
+  transition:.3s;
+}
+
+.source-card:hover {
+  transform:translateY(-6px);
+  border-color:var(--green);
+}
+
+.source-card .emoji { display:block; font-size:24px; }
+.source-card strong { display:block; font-size:11px; }
+.source-card small { font-size:9px; color:var(--muted); }
+
+.visual-bottom {
+  display:flex;
+  justify-content:space-around;
+  text-align:center;
+  border-top:1px solid rgba(255,255,255,.1);
+  margin-top:18px;
+  padding-top:15px;
+}
+
+.visual-bottom strong { display:block; color:var(--cyan); font-size:20px; }
+.visual-bottom span { font-size:9px; color:var(--muted); }
+
+.section-head { margin-bottom:35px; max-width:720px; }
+.section-head h2 { font-size:clamp(28px,4vw,43px); line-height:1.2; margin:12px 0; letter-spacing:-1.5px; }
+.section-head p { color:var(--muted); font-size:14px; }
+
+.kicker {
+  color:var(--green);
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:3px;
+}
+
+.project-section {
+  padding:85px 0;
+  border-bottom:1px solid rgba(255,255,255,.045);
+  scroll-margin-top:75px;
+}
+
+.section-index {
+  display:inline-block;
+  font-size:12px;
+  color:var(--cyan);
+  letter-spacing:2px;
+  font-weight:800;
+  margin-bottom:10px;
+}
+
+.cards {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:17px;
+  margin-top:28px;
+}
+
+.card {
+  position:relative;
+  padding:23px;
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:17px;
+  background:linear-gradient(145deg,rgba(21,49,66,.85),rgba(9,27,41,.9));
+  transition:transform .35s,border-color .35s,box-shadow .35s;
+  overflow:hidden;
+}
+
+.card:hover {
+  transform:translateY(-7px);
+  border-color:rgba(84,255,173,.5);
+  box-shadow:0 15px 35px rgba(0,0,0,.25);
+}
+
+.card-icon { font-size:27px; margin-bottom:13px; }
+.card h3 { font-size:16px; margin-bottom:9px; }
+.card p { font-size:13px; color:var(--muted); }
+
+.chip {
+  display:inline-block;
+  padding:5px 10px;
+  margin-top:13px;
+  border-radius:30px;
+  color:var(--green);
+  background:rgba(84,255,173,.08);
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:1px;
+}
+
+.flow {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  flex-wrap:wrap;
+  margin:35px 0;
+}
+
+.flow-node {
+  min-width:145px;
+  text-align:center;
+  padding:18px 13px;
+  border:1px solid rgba(84,255,173,.3);
+  border-radius:14px;
+  background:rgba(84,255,173,.055);
+}
+
+.flow-node strong { display:block; color:var(--green); font-size:13px; }
+.flow-node small { color:var(--muted); font-size:10px; }
+.flow-arrow { color:var(--cyan); font-size:23px; animation:arrow 1.5s infinite; }
+
+@keyframes arrow {
+  50% { transform:translateX(5px); opacity:.45; }
+}
+
+.priority { --accent:var(--green); }
+.priority.high { --accent:var(--red); }
+.priority.medium { --accent:var(--amber); }
+
+.priority::before {
+  content:"";
+  position:absolute;
+  left:0;right:0;top:0;
+  height:3px;
+  background:var(--accent);
+}
+
+.priority .level {
+  font-size:32px;
+  font-weight:900;
+  color:var(--accent);
+  margin:12px 0;
+}
+
+.timeline {
+  border-left:2px solid rgba(84,255,173,.3);
+  margin:30px 0 0 10px;
+  padding-left:28px;
+}
+
+.timeline-item { position:relative; padding-bottom:28px; }
+.timeline-item::before {
+  content:"";
+  position:absolute;
+  left:-36px;
+  top:5px;
+  width:13px;
+  height:13px;
+  background:var(--green);
+  border-radius:50%;
+  box-shadow:0 0 15px var(--green);
+}
+
+.timeline-item h3 { font-size:15px; }
+.timeline-item p { font-size:13px; color:var(--muted); margin-top:5px; }
+
+.info-table {
+  width:100%;
+  border-collapse:collapse;
+  margin-top:25px;
+  font-size:13px;
+}
+
+.info-table th,.info-table td {
+  text-align:left;
+  padding:14px;
+  border-bottom:1px solid rgba(255,255,255,.1);
+}
+
+.info-table th { color:var(--green); font-size:10px; letter-spacing:1px; }
+.info-table td { color:var(--muted); }
+
+.demo-panel {
+  padding:32px;
+  border:1px solid rgba(84,255,173,.25);
+  border-radius:20px;
+  background:linear-gradient(120deg,rgba(84,255,173,.08),rgba(67,220,255,.07));
+}
+
+.demo-panel p { color:var(--muted); font-size:13px; }
+
+.placeholder {
+  border:1px dashed rgba(84,255,173,.35);
+  border-radius:12px;
+  padding:20px;
+  color:var(--muted);
+  font-size:12px;
+  text-align:center;
+  margin-top:18px;
+}
+
+footer {
+  text-align:center;
+  padding:45px 0;
+  color:var(--muted);
+  border-top:1px solid rgba(255,255,255,.08);
+}
+
+footer strong { color:var(--green); }
+
+@media(max-width:850px) {
+  .hero { grid-template-columns:1fr; padding-top:55px; }
+  .hero-visual { max-width:570px; width:100%; margin:auto; }
+  .cards { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .nav-links {
+    display:none;
+    position:absolute;
+    top:72px;
+    left:5%;
+    right:5%;
+    padding:20px;
+    background:#102536;
+    border:1px solid #345164;
+    border-radius:12px;
+    flex-direction:column;
+    align-items:flex-start;
+  }
+  .nav-links.active { display:flex; }
+  .menu-btn { display:block; }
+}
+
+@media(max-width:560px) {
+  .cards { grid-template-columns:1fr; }
+  .flow { flex-direction:column; }
+  .flow-arrow { transform:rotate(90deg); }
+  .info-table { font-size:11px; }
+  .info-table th,.info-table td { padding:9px 6px; }
+}
+
+@media(prefers-reduced-motion:reduce) {
+  *,*::before,*::after {
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+    scroll-behavior:auto!important;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="container nav">
+    <a class="logo" href="#home">SOLAR<span>SYNC.</span></a>
+    <button class="menu-btn" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="#home">HOME</a>
+      <a href="#p01">PROJECT</a>
+      <a href="#p06">ARCHITECTURE</a>
+      <a href="#p07">DESIGN</a>
+      <a href="#p08">BUILD</a>
+      <a href="#p14">DEMO</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<!-- HERO -->
+<section class="container hero" id="home">
+  <div class="hero-content">
+    <div class="hero-tag">✦ EMBEDDED SYSTEMS MINI PROJECT</div>
+    <p class="kicker" style="margin-top:25px;">INTELLIGENT ENERGY MANAGEMENT</p>
+    <h1>Powering a<br>Smarter <span>Tomorrow.</span></h1>
+    <p>
+      An STM32-based Solar Power Management System designed to
+      monitor multiple energy sources and manage three priority-based
+      electrical loads through embedded control logic.
+    </p>
+    <div class="hero-actions">
+      <a href="#p01">EXPLORE PROJECT ↗</a>
+      <a href="#p06">SYSTEM ARCHITECTURE</a>
+    </div>
+    <p style="font-size:10px;margin-top:25px;letter-spacing:2px;">
+      SOLAR · BATTERY · GRID · STM32 · LOAD PRIORITY
+    </p>
+  </div>
+
+  <div class="hero-visual">
+    <div class="visual-top">
+      <span>ENERGY MANAGEMENT SYSTEM</span>
+      <span class="live">● CONCEPT VIEW</span>
+    </div>
+    <div class="core-area">
+      <div class="orbit outer"></div>
+      <div class="orbit"></div>
+      <div class="core">
+        <div><strong>STM32</strong><small>CONTROL CORE</small></div>
+      </div>
+    </div>
+    <div class="source-grid">
+      <div class="source-card"><span class="emoji">☀️</span><strong>SOLAR</strong><small>Renewable</small></div>
+      <div class="source-card"><span class="emoji">🔋</span><strong>BATTERY</strong><small>Storage</small></div>
+      <div class="source-card"><span class="emoji">⚡</span><strong>GRID</strong><small>Support</small></div>
+    </div>
+    <div class="visual-bottom">
+      <div><strong>03</strong><span>INPUT SOURCES</span></div>
+      <div><strong>01</strong><span>CONTROLLER</span></div>
+      <div><strong>03</strong><span>PRIORITY LOADS</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 01 PROJECT OVERVIEW -->
+<section class="project-section" id="p01">
+<div class="container">
+  <span class="section-index">01 / 15</span>
+  <div class="section-head">
+    <p class="kicker">PROJECT OVERVIEW</p>
+    <h2>Intelligent Solar Power Management System</h2>
+    <p>
+      This project explores an embedded control approach for managing
+      solar, battery and grid energy inputs while organizing connected
+      loads according to their priority.
+    </p>
+  </div>
+  <div class="cards">
+    <article class="card"><div class="card-icon">☀️</div><h3>Solar Energy</h3><p>Renewable energy input considered in the proposed system.</p></article>
+    <article class="card"><div class="card-icon">🔋</div><h3>Battery Storage</h3><p>Represents stored energy available to support the system.</p></article>
+    <article class="card"><div class="card-icon">⚡</div><h3>Grid Supply</h3><p>An additional energy source in the multi-source concept.</p></article>
+  </div>
+</div>
+</section>
+
+<!-- 02 TEAMS AND ROLES -->
+<section class="project-section" id="p02">
+<div class="container">
+  <span class="section-index">02 / 15</span>
+  <div class="section-head">
+    <p class="kicker">TEAM & RESPONSIBILITIES</p>
+    <h2>People behind the project.</h2>
+    <p>Team members and their contributions to planning, implementation, testing and documentation.</p>
+  </div>
+  <div class="cards">
+    <article class="card"><div class="card-icon">🧠</div><h3>System Design</h3><p>Project concept, source selection, system architecture and load-priority planning.</p></article>
+    <article class="card"><div class="card-icon">💻</div><h3>Programming</h3><p>STM32 programming, input reading and output-control logic.</p></article>
+    <article class="card"><div class="card-icon">🧪</div><h3>Simulation & Testing</h3><p>Wokwi circuit setup, testing, troubleshooting and project records.</p></article>
+  </div>
+  <div class="placeholder">Add your actual team members, names, photographs and individual responsibilities here.</div>
+</div>
+</section>
+
+<!-- 03 PROBLEM AND NEED -->
+<section class="project-section" id="p03">
+<div class="container">
+  <span class="section-index">03 / 15</span>
+  <div class="section-head">
+    <p class="kicker">PROBLEM & NEED</p>
+    <h2>Why does intelligent energy management matter?</h2>
+    <p>Multiple energy inputs and loads with different importance levels create a need for coordinated control.</p>
+  </div>
+  <div class="cards">
+    <article class="card"><div class="card-icon">📉</div><h3>Changing Solar Availability</h3><p>Solar energy availability can vary with environmental conditions.</p></article>
+    <article class="card"><div class="card-icon">🔌</div><h3>Multiple Sources</h3><p>Coordinating different power sources requires monitoring and decision-making.</p></article>
+    <article class="card"><div class="card-icon">🎯</div><h3>Different Load Priorities</h3><p>Critical loads should receive preference over less important loads when energy is limited.</p></article>
+  </div>
+  <div class="demo-panel" style="margin-top:25px;">
+    <h3>Target Audience</h3>
+    <p>Students, embedded-system developers and learners interested in renewable energy management, microcontrollers and intelligent load control.</p>
+  </div>
+</div>
+</section>
+
+<!-- 04 CONCEPT CHOICES -->
+<section class="project-section" id="p04">
+<div class="container">
+  <span class="section-index">04 / 15</span>
+  <div class="section-head">
+    <p class="kicker">CONCEPT CHOICES</p>
+    <h2>Choosing the right approach.</h2>
+    <p>The selected concept combines source monitoring with centralized embedded decision-making.</p>
+  </div>
+  <div class="cards">
+    <article class="card"><div class="card-icon">☀️</div><h3>Multi-source Concept</h3><p>Solar, battery and grid are considered as the three energy inputs.</p><span class="chip">SELECTED CONCEPT</span></article>
+    <article class="card"><div class="card-icon">🧠</div><h3>STM32 Controller</h3><p>A single embedded controller coordinates input monitoring and load-control decisions.</p><span class="chip">SELECTED CONTROLLER</span></article>
+    <article class="card"><div class="card-icon">🎚️</div><h3>Priority-based Loads</h3><p>Three loads are categorized as high, medium and low priority.</p><span class="chip">SELECTED STRATEGY</span></article>
+  </div>
+</div>
+</section>
+
+<!-- 05 REVIEW DECISION / REQUIREMENTS -->
+<section class="project-section" id="p05">
+<div class="container">
+  <span class="section-index">05 / 15</span>
+  <div class="section-head">
+    <p class="kicker">REVIEW DECISION & REQUIREMENTS</p>
+    <h2>Defining what the system must achieve.</h2>
+  </div>
+  <div class="cards">
+    <article class="card"><h3>01. Input Monitoring</h3><p>Read the three simulated source input levels.</p></article>
+    <article class="card"><h3>02. Embedded Processing</h3><p>Use STM32 to process input readings and execute control logic.</p></article>
+    <article class="card"><h3>03. Priority Control</h3><p>Represent three load outputs and their priority-based operation.</p></article>
+  </div>
+  <div class="demo-panel" style="margin-top:25px;">
+    <h3>Design Decision</h3>
+    <p>The project uses STM32 as its central controller and a Wokwi simulation to develop and examine the proposed input-processing-output concept.</p>
+  </div>
+</div>
+</section>
+
+<!-- 06 ARCHITECTURE -->
+<section class="project-section" id="p06">
+<div class="container">
+  <span class="section-index">06 / 15</span>
+  <div class="section-head">
+    <p class="kicker">ARCHITECTURE & SUBSYSTEMS</p>
+    <h2>Inside the energy management system.</h2>
+    <p>The design is divided into input, processing and output subsystems.</p>
+  </div>
+  <div class="flow">
+    <div class="flow-node"><strong>INPUT</strong><small>Solar / Battery / Grid</small></div>
+    <span class="flow-arrow">⟶</span>
+    <div class="flow-node"><strong>STM32</strong><small>Processing & decisions</small></div>
+    <span class="flow-arrow">⟶</span>
+    <div class="flow-node"><strong>OUTPUT</strong><small>Load 1 / 2 / 3</small></div>
+  </div>
+  <div class="cards">
+    <article class="card"><h3>Input Subsystem</h3><p>Potentiometers simulate changing readings for the three energy sources.</p></article>
+    <article class="card"><h3>Processing Subsystem</h3><p>STM32 reads the inputs and executes the programmed control logic.</p></article>
+    <article class="card"><h3>Output Subsystem</h3><p>Three LEDs indicate the status of the priority-based loads in simulation.</p></article>
+  </div>
+</div>
+</section>
+
+<!-- 07 DESIGN -->
+<section class="project-section" id="p07">
+<div class="container">
+  <span class="section-index">07 / 15</span>
+  <div class="section-head">
+    <p class="kicker">SYSTEM DESIGN</p>
+    <h2>Three loads. Three priority levels.</h2>
+    <p>Load importance is organized into three distinct priority categories.</p>
+  </div>
+  <div class="cards">
+    <article class="card priority high">
+      <div class="card-icon">🔴</div><p class="kicker">LEVEL 01</p>
+      <div class="level">HIGH</div>
+      <h3>Load 1</h3><p>Highest priority in the proposed load-management strategy.</p>
+    </article>
+    <article class="card priority medium">
+      <div class="card-icon">🟡</div><p class="kicker">LEVEL 02</p>
+      <div class="level">MEDIUM</div>
+      <h3>Load 2</h3><p>Second priority, considered after the high-priority load.</p>
+    </article>
+    <article class="card priority">
+      <div class="card-icon">🟢</div><p class="kicker">LEVEL 03</p>
+      <div class="level">LOW</div>
+      <h3>Load 3</h3><p>Lower priority, considered after the more critical loads.</p>
+    </article>
+  </div>
+  <div class="demo-panel" style="margin-top:25px;">
+    <h3>Design Philosophy</h3>
+    <p>Prioritize important loads and organize output control according to the availability of energy and the implemented decision logic.</p>
+  </div>
+</div>
+</section>
+
+<!-- 08 FOUNDATION BUILD AND VERIFICATION -->
+<section class="project-section" id="p08">
+<div class="container">
+  <span class="section-index">08 / 15</span>
+  <div class="section-head">
+    <p class="kicker">FOUNDATION, BUILD & VERIFICATION</p>
+    <h2>Turning the design into a working simulation.</h2>
+  </div>
+  <div class="timeline">
+    <div class="timeline-item"><h3>01 — Planning</h3><p>Defined three energy inputs and three load priorities.</p></div>
+    <div class="timeline-item"><h3>02 — Circuit Setup</h3><p>Created the STM32-based circuit in Wokwi.</p></div>
+    <div class="timeline-item"><h3>03 — Input Connections</h3><p>Connected potentiometers to represent source readings.</p></div>
+    <div class="timeline-item"><h3>04 — Output Connections</h3><p>Added three LEDs representing the three loads.</p></div>
+    <div class="timeline-item"><h3>05 — Programming</h3><p>Developed and refined input reading and output-control logic.</p></div>
+    <div class="timeline-item"><h3>06 — Verification</h3><p>Checked changing readings and observed simulated output behaviour.</p></div>
+  </div>
+  <div class="placeholder">Add your actual Wokwi circuit screenshot and final simulation screenshot here.</div>
+</div>
+</section>
+
+<!-- 09 PREDICTED VS CALCULATED -->
+<section class="project-section" id="p09">
+<div class="container">
+  <span class="section-index">09 / 15</span>
+  <div class="section-head">
+    <p class="kicker">PREDICTED VS CALCULATED</p>
+    <h2>Comparing expected and observed behaviour.</h2>
+    <p>This section records the design expectations and actual results obtained during testing.</p>
+  </div>
+  <div class="card">
+    <h3>Verification comparison</h3>
+    <table class="info-table">
+      <thead><tr><th>PARAMETER</th><th>PREDICTED</th><th>OBSERVED / CALCULATED</th></tr></thead>
+      <tbody>
+        <tr><td>Source readings</td><td>Change with input adjustment</td><td>Enter measured values</td></tr>
+        <tr><td>Controller response</td><td>Process source inputs</td><td>Enter verified response</td></tr>
+        <tr><td>Load indicators</td><td>Follow control logic</td><td>Enter observed LED states</td></tr>
+        <tr><td>Priority management</td><td>Follow load order</td><td>Enter test observations</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="placeholder">Replace the entries with actual readings, calculations, screenshots and test evidence. No unverified performance values are assumed.</div>
+</div>
+</section>
+
+<!-- 10 FAILURE AND FIXES -->
+<section class="project-section" id="p10">
+<div class="container">
+  <span class="section-index">10 / 15</span>
+  <div class="section-head">
+    <p class="kicker">FAILURE & FIXES</p>
+    <h2>Every problem became a learning opportunity.</h2>
+  </div>
+  <div class="cards">
+    <article class="card"><div class="card-icon">🎛️</div><h3>Input Reading Issues</h3><p>Checked potentiometer connections and analog input readings during simulation.</p><span class="chip">TROUBLESHOOTING</span></article>
+    <article class="card"><div class="card-icon">💡</div><h3>LED Behaviour</h3><p>Investigated LED connections, output pins and programmed conditions when indicators behaved unexpectedly.</p><span class="chip">OUTPUT DEBUGGING</span></article>
+    <article class="card"><div class="card-icon">🔘</div><h3>Button Response</h3><p>Investigated button handling and state changes to improve the expected interaction.</p><span class="chip">LOGIC REFINEMENT</span></article>
+  </div>
+</div>
+</section>
+
+<!-- 11 ENGINEERING NOTEBOOK -->
+<section class="project-section" id="p11">
+<div class="container">
+  <span class="section-index">11 / 15</span>
+  <div class="section-head">
+    <p class="kicker">ENGINEERING NOTEBOOK</p>
+    <h2>Recording the engineering journey.</h2>
+  </div>
+  <div class="cards">
+    <article class="card"><h3>Design Journal</h3><p>Initial concept, component selection, source monitoring and load-priority planning.</p></article>
+    <article class="card"><h3>Development Journal</h3><p>Circuit connections, pin configuration, coding and implementation updates.</p></article>
+    <article class="card"><h3>Testing Journal</h3><p>Input readings, output behaviour, problems encountered and corrections made.</p></article>
+  </div>
+  <div class="placeholder">Insert notebook photographs, dated entries and development screenshots.</div>
+</div>
+</section>
+
+<!-- 12 REVIEW RECORD -->
+<section class="project-section" id="p12">
+<div class="container">
+  <span class="section-index">12 / 15</span>
+  <div class="section-head">
+    <p class="kicker">REVIEW RECORD</p>
+    <h2>Review. Evaluate. Improve.</h2>
+    <p>A record of feedback, decisions and changes made during project reviews.</p>
+  </div>
+  <div class="card">
+    <table class="info-table">
+      <thead><tr><th>REVIEW ITEM</th><th>RECORD</th></tr></thead>
+      <tbody>
+        <tr><td>Review date</td><td>Enter date</td></tr>
+        <tr><td>Project stage</td><td>Enter stage</td></tr>
+        <tr><td>Feedback received</td><td>Add actual feedback</td></tr>
+        <tr><td>Action taken</td><td>Document the improvement</td></tr>
+        <tr><td>Review outcome</td><td>Enter actual outcome</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</section>
+
+<!-- 13 REFLECTIONS AND FORWARD LINKS -->
+<section class="project-section" id="p13">
+<div class="container">
+  <span class="section-index">13 / 15</span>
+  <div class="section-head">
+    <p class="kicker">REFLECTIONS & FORWARD LINKS</p>
+    <h2>What we learned. What comes next.</h2>
+  </div>
+  <div class="cards">
+    <article class="card"><div class="card-icon">📚</div><h3>Technical Learning</h3><p>Microcontroller programming, analog input reading, digital outputs and simulation.</p></article>
+    <article class="card"><div class="card-icon">🧩</div><h3>Engineering Skills</h3><p>System planning, circuit debugging, testing and structured documentation.</p></article>
+    <article class="card"><div class="card-icon">🚀</div><h3>Future Scope</h3><p>Physical energy-source integration, additional sensing, display monitoring and protection mechanisms.</p></article>
+  </div>
+</div>
+</section>
+
+<!-- 14 FINAL DEMONSTRATION -->
+<section class="project-section" id="p14">
+<div class="container">
+  <span class="section-index">14 / 15</span>
+  <div class="section-head">
+    <p class="kicker">FINAL DEMONSTRATION</p>
+    <h2>From source inputs to priority-based outputs.</h2>
+  </div>
+  <div class="demo-panel">
+    <h3>Solar Power Management using STM32</h3>
+    <p>The final demonstration presents the simulated source readings, STM32 processing and three load indicators.</p>
+    <div class="flow">
+      <div class="flow-node"><strong>INPUT</strong><small>Solar / Battery / Grid</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node"><strong>PROCESS</strong><small>STM32 Controller</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node"><strong>OUTPUT</strong><small>Three priority loads</small></div>
+    </div>
+  </div>
+  <div class="placeholder">Add your final demonstration video, Wokwi link and presentation photographs here.</div>
+</div>
+</section>
+
+<!-- 15 PROJECT FILES AND REFERENCES -->
+<section class="project-section" id="p15">
+<div class="container">
+  <span class="section-index">15 / 15</span>
+  <div class="section-head">
+    <p class="kicker">PROJECT FILES & REFERENCES</p>
+    <h2>Everything behind the project.</h2>
+  </div>
+  <div class="cards">
+    <article class="card"><div class="card-icon">🧪</div><h3>Wokwi Simulation</h3><p>Virtual circuit design and simulation evidence.</p></article>
+    <article class="card"><div class="card-icon">💻</div><h3>Source Code</h3><p>STM32 program files and development resources.</p></article>
+    <article class="card"><div class="card-icon">📖</div><h3>References</h3><p>STM32 documentation, embedded-system resources and technical references.</p></article>
+  </div>
+  <div class="placeholder">Add working links to your actual code repository, Wokwi project and reference materials.</div>
+</div>
+</section>
+
+</main>
+
+<footer>
+  <div class="container">
+    <div class="logo">SOLAR<span>SYNC.</span></div>
+    <p style="margin-top:12px;">Solar Power Management System using STM32</p>
+    <p style="margin-top:8px;">Designed with innovation. Powered by embedded intelligence.</p>
+    <p style="margin-top:20px;">© <span id="copyright-year">2026</span> · Mini Project</p>
+    <a href="#home" style="display:inline-block;margin-top:15px;color:#54ffad;">BACK TO TOP ↑</a>
+  </div>
+</footer>
+
+<!-- Keep your existing script -->
+<script src="script.js"></script>
+
+<!-- Additional navigation support -->
+<script>
+document.getElementById("copyright-year").textContent = new Date().getFullYear();
+
+const menu = document.querySelector(".menu-btn");
+const nav = document.querySelector(".nav-links");
+
+if (menu && nav) {
+  menu.addEventListener("click", () => {
+    const open = nav.classList.toggle("active");
+    menu.setAttribute("aria-expanded", String(open));
+    menu.textContent = open ? "✕" : "☰";
+  });
+
+  nav.querySelectorAll("a").forEach(link => {
+    link.addEventListener("click", () => {
+      nav.classList.remove("active");
+      menu.setAttribute("aria-expanded", "false");
+      menu.textContent = "☰";
+    });
+  });
+}
+</script>
+
+</body>
+</html>
